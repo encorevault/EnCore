@@ -1,2 +1,2 @@
-# encore
-EnCore Vault 
+# EnCore Vault
+A decentralized yield farming protocol 
