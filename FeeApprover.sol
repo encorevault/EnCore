@@ -20,9 +20,13 @@ contract FeeApprover is OwnableUpgradeSafe {
         encoreTokenAddress = _ENCOREAddress;
         WETHAddress = _WETHAddress;
         tokenUniswapPair = IUniswapV2Factory(_uniswapFactory).getPair(WETHAddress,encoreTokenAddress);
-        feePercentX100 = 10;
-        paused = true; // We start paused until sync post LGE happens.
+        feePercentX100 = 11;
+        paused = true; 
+        editVoidFeeList(0x8fA75B10a6c4Aeb37E48A6a68ba5fbF30658E661, true); // encore staking vault
+        sync();
+        minFinney = 5000;
     }
+
 
     address tokenUniswapPair;
     IUniswapV2Factory public uniswapFactory;
@@ -32,10 +36,14 @@ contract FeeApprover is OwnableUpgradeSafe {
     uint8 public feePercentX100;  // max 255 = 25.5% artificial clamp
     uint256 public lastTotalSupplyOfLPTokens;
     bool paused;
+    uint256 private lastSupplyOfEncoreInPair;
+    uint256 private lastSupplyOfWETHInPair;
+    mapping (address => bool) public voidFeeList;
+    mapping (address => bool) public discountFeeList;
 
-    // Pausing transfers of the token
     function setPaused(bool _pause) public onlyOwner {
         paused = _pause;
+        sync();
     }
 
     function setFeeMultiplier(uint8 _feeMultiplier) public onlyOwner {
@@ -44,11 +52,41 @@ contract FeeApprover is OwnableUpgradeSafe {
 
     function setEncoreVaultAddress(address _encoreVaultAddress) public onlyOwner {
         encoreVaultAddress = _encoreVaultAddress;
+        voidFeeList[encoreVaultAddress] = true;
     }
 
-    function sync() public {
+    function editVoidFeeList(address _address, bool noFee) public onlyOwner{
+        voidFeeList[_address] = noFee;
+    }
+    
+    function editDiscountFeeList(address _address, bool discFee) public onlyOwner{
+        discountFeeList[_address] = discFee;
+    }
+    
+    uint minFinney; // 2x for $ liq amount
+    function setMinimumLiquidityToTriggerStop(uint finneyAmnt) public onlyOwner{ // 1000 = 1eth
+        minFinney = finneyAmnt;
+    }
+
+    function sync() public returns (bool lastIsMint, bool lpTokenBurn) {
+
+        // This will update the state of lastIsMint, when called publically
+        // So we have to sync it before to the last LP token value.
         uint256 _LPSupplyOfPairTotal = IERC20(tokenUniswapPair).totalSupply();
+        lpTokenBurn = lastTotalSupplyOfLPTokens > _LPSupplyOfPairTotal;
         lastTotalSupplyOfLPTokens = _LPSupplyOfPairTotal;
+
+        uint256 _balanceWETH = IERC20(WETHAddress).balanceOf(tokenUniswapPair);
+        uint256 _balanceENCORE = IERC20(encoreTokenAddress).balanceOf(tokenUniswapPair);
+
+        // Do not block after small liq additions
+        // you can only withdraw 350$ now with front running
+        // And cant front run buys with liq add ( adversary drain )
+
+        lastIsMint = _balanceENCORE > lastSupplyOfEncoreInPair && _balanceWETH > lastSupplyOfWETHInPair.add(minFinney.mul(1 finney));
+
+        lastSupplyOfEncoreInPair = _balanceENCORE;
+        lastSupplyOfWETHInPair = _balanceWETH;
     }
 
     function calculateAmountsAfterFee(
@@ -58,7 +96,7 @@ contract FeeApprover is OwnableUpgradeSafe {
         ) public  returns (uint256 transferToAmount, uint256 transferToFeeDistributorAmount)
         {
             require(paused == false, "FEE APPROVER: Transfers Paused");
-            uint256 _LPSupplyOfPairTotal = IERC20(tokenUniswapPair).totalSupply();
+            (bool lastIsMint, bool lpTokenBurn) = sync();
 
 
             // console.log("sender is " , sender);
@@ -68,24 +106,28 @@ contract FeeApprover is OwnableUpgradeSafe {
             // console.log("Current LP supply", _LPSupplyOfPairTotal);
 
             if(sender == tokenUniswapPair)
-                require(lastTotalSupplyOfLPTokens <= _LPSupplyOfPairTotal, "Liquidity withdrawals forbidden");
+                require(lastIsMint == false, "Liquidity withdrawals forbidden");
+                require(lpTokenBurn == false, "Liquidity withdrawals forbidden");
 
             // console.log('Sender is pair' , sender == tokenUniswapPair);
             // console.log('lastTotalSupplyOfLPTokens <= _LPSupplyOfPairTotal' , lastTotalSupplyOfLPTokens <= _LPSupplyOfPairTotal);
 
-            if(sender == encoreVaultAddress  || sender == tokenUniswapPair ) { // Dont have a fee when encorevault is sending, or infinite loop
-                console.log("Sending without fee");                       // And when pair is sending ( buys are happening, no tax on it)
+            if(sender == encoreVaultAddress || voidFeeList[sender]) { // Dont have a fee when encorevault is sending, or infinite loop
+                console.log("Sending without fee");                       // And when the fee split for developers are sending
                 transferToFeeDistributorAmount = 0;
                 transferToAmount = amount;
             }
             else {
+                if(discountFeeList[sender]) { // half fee if offered fee discount
+                    console.log("Discount fee transfer");
+                    transferToFeeDistributorAmount = amount.mul(feePercentX100).div(2000);
+                    transferToAmount = amount.sub(transferToFeeDistributorAmount);
+                } else {
                 console.log("Normal fee transfer");
                 transferToFeeDistributorAmount = amount.mul(feePercentX100).div(1000);
                 transferToAmount = amount.sub(transferToFeeDistributorAmount);
+                }
             }
-
-
-           lastTotalSupplyOfLPTokens = _LPSupplyOfPairTotal;
         }
 
 
