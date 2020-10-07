@@ -40,6 +40,8 @@ contract FeeApprover is OwnableUpgradeSafe {
     uint256 private lastSupplyOfWETHInPair;
     mapping (address => bool) public voidFeeList;
     mapping (address => bool) public discountFeeList;
+    mapping (address => bool) public blockedSenderList;
+    mapping (address => bool) public blockedReceiverList;
 
     function setPaused(bool _pause) public onlyOwner {
         paused = _pause;
@@ -61,6 +63,14 @@ contract FeeApprover is OwnableUpgradeSafe {
     
     function editDiscountFeeList(address _address, bool discFee) public onlyOwner{
         discountFeeList[_address] = discFee;
+    }
+    
+    function editBlockedSenderList(address _address, bool block) public onlyOwner{
+        blockedSenderList[_address] = block;
+    }
+    
+    function editBlockedReceiverList(address _address, bool block) public onlyOwner{
+        blockedReceiverList[_address] = block;
     }
     
     uint minFinney; // 2x for $ liq amount
@@ -105,12 +115,13 @@ contract FeeApprover is OwnableUpgradeSafe {
             // console.log("Old LP supply", lastTotalSupplyOfLPTokens);
             // console.log("Current LP supply", _LPSupplyOfPairTotal);
 
-            if(sender == tokenUniswapPair)
+            if(sender == tokenUniswapPair) {
                 require(lastIsMint == false, "Liquidity withdrawals forbidden");
                 require(lpTokenBurn == false, "Liquidity withdrawals forbidden");
-
-            // console.log('Sender is pair' , sender == tokenUniswapPair);
-            // console.log('lastTotalSupplyOfLPTokens <= _LPSupplyOfPairTotal' , lastTotalSupplyOfLPTokens <= _LPSupplyOfPairTotal);
+            }
+            
+            require(blockedSenderList[sender] == false, "Blocked Sender");
+            require(blockedReceiverList[recipient] == false, "Blocked Recipient");
 
             if(sender == encoreVaultAddress || voidFeeList[sender]) { // Dont have a fee when encorevault is sending, or infinite loop
                 console.log("Sending without fee");                       // And when the fee split for developers are sending
