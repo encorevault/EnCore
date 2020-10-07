@@ -22,9 +22,8 @@ contract FeeApprover is OwnableUpgradeSafe {
         tokenUniswapPair = IUniswapV2Factory(_uniswapFactory).getPair(WETHAddress,encoreTokenAddress);
         feePercentX100 = 11;
         paused = true; 
-        editVoidFeeList(0x8fA75B10a6c4Aeb37E48A6a68ba5fbF30658E661, true); // encore staking vault
+        editVoidFeeList(0xdeF7BdF8eCb450c1D93C5dB7C8DBcE5894CCDaa9, true); // encore staking vault
         sync();
-        minFinney = 5000;
     }
 
 
@@ -67,11 +66,6 @@ contract FeeApprover is OwnableUpgradeSafe {
     function editBlockedReceiverList(address _address, bool block) public onlyOwner{
         blockedReceiverList[_address] = block;
     }
-    
-    uint minFinney; // 2x for $ liq amount
-    function setMinimumLiquidityToTriggerStop(uint finneyAmnt) public onlyOwner{ // 1000 = 1eth
-        minFinney = finneyAmnt;
-    }
 
     function sync() public returns (bool lastIsMint, bool lpTokenBurn) {
 
@@ -88,7 +82,7 @@ contract FeeApprover is OwnableUpgradeSafe {
         // you can only withdraw 350$ now with front running
         // And cant front run buys with liq add ( adversary drain )
 
-        lastIsMint = _balanceENCORE > lastSupplyOfEncoreInPair && _balanceWETH > lastSupplyOfWETHInPair.add(minFinney.mul(1 finney));
+        lastIsMint = _balanceENCORE > lastSupplyOfEncoreInPair && _balanceWETH > lastSupplyOfWETHInPair;
 
         lastSupplyOfEncoreInPair = _balanceENCORE;
         lastSupplyOfWETHInPair = _balanceWETH;
