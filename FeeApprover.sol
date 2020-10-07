@@ -40,7 +40,6 @@ contract FeeApprover is OwnableUpgradeSafe {
     uint256 private lastSupplyOfWETHInPair;
     mapping (address => bool) public voidFeeList;
     mapping (address => bool) public discountFeeList;
-    mapping (address => bool) public blockedSenderList;
     mapping (address => bool) public blockedReceiverList;
 
     function setPaused(bool _pause) public onlyOwner {
@@ -63,10 +62,6 @@ contract FeeApprover is OwnableUpgradeSafe {
     
     function editDiscountFeeList(address _address, bool discFee) public onlyOwner{
         discountFeeList[_address] = discFee;
-    }
-    
-    function editBlockedSenderList(address _address, bool block) public onlyOwner{
-        blockedSenderList[_address] = block;
     }
     
     function editBlockedReceiverList(address _address, bool block) public onlyOwner{
@@ -120,7 +115,6 @@ contract FeeApprover is OwnableUpgradeSafe {
                 require(lpTokenBurn == false, "Liquidity withdrawals forbidden");
             }
             
-            require(blockedSenderList[sender] == false, "Blocked Sender");
             require(blockedReceiverList[recipient] == false, "Blocked Recipient");
 
             if(sender == encoreVaultAddress || voidFeeList[sender]) { // Dont have a fee when encorevault is sending, or infinite loop
