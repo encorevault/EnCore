@@ -24,7 +24,7 @@ contract FeeApprover is OwnableUpgradeSafe {
         paused = true; 
         editVoidFeeList(0x8fA75B10a6c4Aeb37E48A6a68ba5fbF30658E661, true); // encore staking vault
         sync();
-        minFinney = 5000;
+        //minFinney = 5000;
     }
 
 
@@ -68,32 +68,37 @@ contract FeeApprover is OwnableUpgradeSafe {
         blockedReceiverList[_address] = block;
     }
     
-    uint minFinney; // 2x for $ liq amount
-    function setMinimumLiquidityToTriggerStop(uint finneyAmnt) public onlyOwner{ // 1000 = 1eth
-        minFinney = finneyAmnt;
-    }
+    // uint minFinney; // 2x for $ liq amount
+    // function setMinimumLiquidityToTriggerStop(uint finneyAmnt) public onlyOwner{ // 1000 = 1eth
+    //     minFinney = finneyAmnt;
+    // }
 
-    function sync() public returns (bool lastIsMint, bool lpTokenBurn) {
+    // function sync() public returns (bool lastIsMint, bool lpTokenBurn) {
 
-        // This will update the state of lastIsMint, when called publically
-        // So we have to sync it before to the last LP token value.
+    //     // This will update the state of lastIsMint, when called publically
+    //     // So we have to sync it before to the last LP token value.
+    //     uint256 _LPSupplyOfPairTotal = IERC20(tokenUniswapPair).totalSupply();
+    //     lpTokenBurn = lastTotalSupplyOfLPTokens > _LPSupplyOfPairTotal;
+    //     lastTotalSupplyOfLPTokens = _LPSupplyOfPairTotal;
+
+    //     uint256 _balanceWETH = IERC20(WETHAddress).balanceOf(tokenUniswapPair);
+    //     uint256 _balanceENCORE = IERC20(encoreTokenAddress).balanceOf(tokenUniswapPair);
+
+    //     // Do not block after small liq additions
+    //     // you can only withdraw 350$ now with front running
+    //     // And cant front run buys with liq add ( adversary drain )
+
+    //     lastIsMint = _balanceENCORE > lastSupplyOfEncoreInPair && _balanceWETH > lastSupplyOfWETHInPair.add(minFinney.mul(1 finney));
+
+    //     lastSupplyOfEncoreInPair = _balanceENCORE;
+    //     lastSupplyOfWETHInPair = _balanceWETH;
+    // }
+
+    function sync() public {
         uint256 _LPSupplyOfPairTotal = IERC20(tokenUniswapPair).totalSupply();
-        lpTokenBurn = lastTotalSupplyOfLPTokens > _LPSupplyOfPairTotal;
         lastTotalSupplyOfLPTokens = _LPSupplyOfPairTotal;
-
-        uint256 _balanceWETH = IERC20(WETHAddress).balanceOf(tokenUniswapPair);
-        uint256 _balanceENCORE = IERC20(encoreTokenAddress).balanceOf(tokenUniswapPair);
-
-        // Do not block after small liq additions
-        // you can only withdraw 350$ now with front running
-        // And cant front run buys with liq add ( adversary drain )
-
-        lastIsMint = _balanceENCORE > lastSupplyOfEncoreInPair && _balanceWETH > lastSupplyOfWETHInPair.add(minFinney.mul(1 finney));
-
-        lastSupplyOfEncoreInPair = _balanceENCORE;
-        lastSupplyOfWETHInPair = _balanceWETH;
     }
-
+    
     function calculateAmountsAfterFee(
         address sender,
         address recipient, // unusued maybe use din future
@@ -101,7 +106,7 @@ contract FeeApprover is OwnableUpgradeSafe {
         ) public  returns (uint256 transferToAmount, uint256 transferToFeeDistributorAmount)
         {
             require(paused == false, "FEE APPROVER: Transfers Paused");
-            (bool lastIsMint, bool lpTokenBurn) = sync();
+            uint256 _LPSupplyOfPairTotal = IERC20(tokenUniswapPair).totalSupply();
 
 
             // console.log("sender is " , sender);
@@ -111,8 +116,9 @@ contract FeeApprover is OwnableUpgradeSafe {
             // console.log("Current LP supply", _LPSupplyOfPairTotal);
 
             if(sender == tokenUniswapPair) {
-                require(lastIsMint == false, "Liquidity withdrawals forbidden");
-                require(lpTokenBurn == false, "Liquidity withdrawals forbidden");
+                require(lastTotalSupplyOfLPTokens <= _LPSupplyOfPairTotal, "Liquidity withdrawals forbidden");
+                //require(lastIsMint == false, "Liquidity withdrawals forbidden");
+                //require(lpTokenBurn == false, "Liquidity withdrawals forbidden");
             }
             
             require(blockedReceiverList[recipient] == false, "Blocked Recipient");
