@@ -13,7 +13,7 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-import "./CORE.sol";
+import "./ENCORE.sol";
 
 contract GovernorAlpha {
     /// @notice The name of this contract
