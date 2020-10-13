@@ -28,7 +28,7 @@ contract FeeApprover is OwnableUpgradeSafe {
 
 
     address tokenETHPair;
-    address tokenUSDTPair;
+    address tokenLINKPair;
     IUniswapV2Factory public uniswapFactory;
     address internal WETHAddress;
     address encoreTokenAddress;
@@ -56,8 +56,8 @@ contract FeeApprover is OwnableUpgradeSafe {
         voidFeeList[encoreVaultAddress] = true;
     }
     
-    function setUSDTpair(address _pair) public onlyOwner {
-        tokenUSDTPair = _pair;
+    function setLINKpair(address _pair) public onlyOwner {
+        tokenLINKPair = _pair;
     }
 
     function editVoidFeeList(address _address, bool noFee) public onlyOwner{
@@ -99,7 +99,7 @@ contract FeeApprover is OwnableUpgradeSafe {
     // }
 
     function sync() public {
-        uint256 _LPSupplyOfPairTotal = IERC20(tokenETHPair).totalSupply().add(IERC20(tokenUSDTPair).totalSupply());
+        uint256 _LPSupplyOfPairTotal = IERC20(tokenETHPair).totalSupply().add(IERC20(tokenLINKPair).totalSupply());
         lastTotalSupplyOfLPTokens = _LPSupplyOfPairTotal;
     }
     
@@ -111,7 +111,7 @@ contract FeeApprover is OwnableUpgradeSafe {
         {
             require(paused == false, "FEE APPROVER: Transfers Paused");
             sync();
-            uint256 _LPSupplyOfPairTotal = IERC20(tokenETHPair).totalSupply().add(IERC20(tokenUSDTPair).totalSupply());
+            uint256 _LPSupplyOfPairTotal = IERC20(tokenETHPair).totalSupply().add(IERC20(tokenLINKPair).totalSupply());
 
 
             // console.log("sender is " , sender);
@@ -120,7 +120,7 @@ contract FeeApprover is OwnableUpgradeSafe {
             // console.log("Old LP supply", lastTotalSupplyOfLPTokens);
             // console.log("Current LP supply", _LPSupplyOfPairTotal);
 
-            if(sender == tokenETHPair || sender == tokenUSDTPair) {
+            if(sender == tokenETHPair || sender == tokenLINKPair) {
                 require(lastTotalSupplyOfLPTokens <= _LPSupplyOfPairTotal, "Liquidity withdrawals forbidden");
                 //require(lastIsMint == false, "Liquidity withdrawals forbidden");
                 //require(lpTokenBurn == false, "Liquidity withdrawals forbidden");
