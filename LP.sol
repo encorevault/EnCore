@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: None
+
 pragma solidity ^0.6.12;
 
 import "@openzeppelin/contracts/GSN/Context.sol";
@@ -29,7 +31,7 @@ contract LPEvent is Context, Ownable {
 
     address public tokenUniswapPair;
     uint256 public contractStartTimestamp;
-    
+    uint256 public totalENCORE;
     mapping (address => uint)  public contributed;
     address public tokenAddress;
     
@@ -59,7 +61,7 @@ contract LPEvent is Context, Ownable {
     }
 
     function liquidityGenerationOngoing() public view returns (bool) {
-        return contractStartTimestamp.add(30 minutes) > block.timestamp;
+        return contractStartTimestamp.add(3 minutes) > block.timestamp;
     }
     
     function emergencyDrain24hAfterLiquidityGenerationEventIsDone() public onlyOwner {
@@ -70,24 +72,16 @@ contract LPEvent is Context, Ownable {
         token.transfer(msg.sender, encore.balanceOf(address(this)));
     }
     
-    function depositENCORE(uint256 _amount, bool agreesToTermsOutlinedInLiquidityGenerationParticipationAgreement) public {
+    function deposit(uint256 _amountENCORE, bool agreesToTermsOutlinedInLiquidityGenerationParticipationAgreement) public {
         require(liquidityGenerationOngoing(), "Liquidity Generation Event over");
         require(agreesToTermsOutlinedInLiquidityGenerationParticipationAgreement, "No agreement provided");
         IERC20 encore = IERC20(_encoreAddress);
-        encore.transferFrom(address(msg.sender), address(this), _amount);
-        contributed[msg.sender] += _amount;
-        emit LiquidityAddition(msg.sender, _amount);
-    }
-    
-    function depositToken(uint256 _amount, bool agreesToTermsOutlinedInLiquidityGenerationParticipationAgreement) public {
-        require(liquidityGenerationOngoing(), "Liquidity Generation Event over");
-        require(agreesToTermsOutlinedInLiquidityGenerationParticipationAgreement, "No agreement provided");
         IERC20 token = IERC20(tokenAddress);
-        IUniswapV2Router02 router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
-        uint256 encoreToken = router.getAmountsOut(1e18, _path)[2].div(1000000);
-        token.transferFrom(address(msg.sender), address(this), _amount);
-        contributed[msg.sender] += _amount.div(encoreToken);
-        emit LiquidityAddition(msg.sender, _amount.div(encoreToken));
+        encore.transferFrom(address(msg.sender), address(this), _amountENCORE);
+        token.transferFrom(address(msg.sender), address(this), _amountENCORE.mul(50));
+        contributed[msg.sender] += _amountENCORE;
+        totalENCORE.add(_amountENCORE);
+        emit LiquidityAddition(msg.sender, _amountENCORE);
     }
     
     bool public LPGenerationCompleted;
@@ -99,9 +93,7 @@ contract LPEvent is Context, Ownable {
         require(LPGenerationCompleted == false, "Liquidity generation already finished");
         IERC20 token = IERC20(tokenAddress);
         IERC20 encore = IERC20(_encoreAddress);
-        IUniswapV2Router02 router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
-        uint256 encoreToken = router.getAmountsOut(1e18, _path)[2].div(1000000);
-        totalContributed = token.balanceOf(address(this)).div(encoreToken).add(encore.balanceOf(address(this)));
+        totalContributed = encore.balanceOf(address(this));
         IUniswapV2Pair pair = IUniswapV2Pair(tokenUniswapPair);
         encore.transfer(address(pair), encore.balanceOf(address(this)));
         token.transfer(address(pair), token.balanceOf(address(this)));
