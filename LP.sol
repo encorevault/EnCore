@@ -83,9 +83,11 @@ contract LPEvent is Context, Ownable {
         require(liquidityGenerationOngoing(), "Liquidity Generation Event over");
         require(agreesToTermsOutlinedInLiquidityGenerationParticipationAgreement, "No agreement provided");
         IERC20 token = IERC20(tokenAddress);
+        IUniswapV2Router02 router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+        uint256 encoreToken = router.getAmountsOut(1e18, _path)[2].div(1000000);
         token.transferFrom(address(msg.sender), address(this), _amount);
-        contributed[msg.sender] += _amount;
-        emit LiquidityAddition(msg.sender, _amount);
+        contributed[msg.sender] += _amount.div(encoreToken);
+        emit LiquidityAddition(msg.sender, _amount.div(encoreToken));
     }
     
     bool public LPGenerationCompleted;
