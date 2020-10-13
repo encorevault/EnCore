@@ -132,7 +132,7 @@ contract FeeApprover is OwnableUpgradeSafe {
                 transferToAmount = amount;
             }
             else {
-                if(discountFeeList[sender]) { // half fee if offered fee discount
+                if(discountFeeList[sender] || discountFeeList(recipient)) { // half fee if offered fee discount
                     console.log("Discount fee transfer");
                     transferToFeeDistributorAmount = amount.mul(feePercentX100).div(2000);
                     transferToAmount = amount.sub(transferToFeeDistributorAmount);
