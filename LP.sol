@@ -48,10 +48,11 @@ contract LPEvent is Context, Ownable {
 
     function createUniswapPairMainnet(address _token, address _encore) public returns (address) {
         require(tokenUniswapPair == address(0), "Token: pool already created");
-        tokenUniswapPair = uniswapFactory.createPair(
-            address(_encore),
-            address(_token)
-        );
+        // tokenUniswapPair = uniswapFactory.createPair(
+        //     address(_encore),
+        //     address(_token)
+        // );
+        tokenUniswapPair = address(0x64F2d5E35742858Df71e04385052BD7423623392);
         return tokenUniswapPair;
     }
     
@@ -61,7 +62,7 @@ contract LPEvent is Context, Ownable {
     }
 
     function liquidityGenerationOngoing() public view returns (bool) {
-        return contractStartTimestamp.add(3 minutes) > block.timestamp;
+        return contractStartTimestamp.add(3 days) > block.timestamp;
     }
     
     function emergencyDrain24hAfterLiquidityGenerationEventIsDone() public onlyOwner {
@@ -77,6 +78,8 @@ contract LPEvent is Context, Ownable {
         require(agreesToTermsOutlinedInLiquidityGenerationParticipationAgreement, "No agreement provided");
         IERC20 encore = IERC20(_encoreAddress);
         IERC20 token = IERC20(tokenAddress);
+        require(encore.balanceOf(address(this)) < 1000e18, "Cap reached");
+        require(encore.balanceOf(address(this)).add(_amountENCORE) <= 1000e18, "Deposit exceeds cap");
         encore.transferFrom(address(msg.sender), address(this), _amountENCORE);
         token.transferFrom(address(msg.sender), address(this), _amountENCORE.mul(50));
         contributed[msg.sender] += _amountENCORE;
@@ -89,10 +92,12 @@ contract LPEvent is Context, Ownable {
     uint256 public totalContributed;
     uint256 public LPperUnit;
     function addLiquidityToUniswapENCORExTOKENPair() public {
-        require(liquidityGenerationOngoing() == false, "Liquidity generation onging");
         require(LPGenerationCompleted == false, "Liquidity generation already finished");
         IERC20 token = IERC20(tokenAddress);
         IERC20 encore = IERC20(_encoreAddress);
+        if(liquidityGenerationOngoing()) {
+            require(encore.balanceOf(address(this)) >= 1000e18, "LPE: Event not over, cap not reached");
+        }
         totalContributed = encore.balanceOf(address(this));
         IUniswapV2Pair pair = IUniswapV2Pair(tokenUniswapPair);
         encore.transfer(address(pair), encore.balanceOf(address(this)));
