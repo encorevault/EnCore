@@ -19,16 +19,16 @@ contract FeeApprover is OwnableUpgradeSafe {
         OwnableUpgradeSafe.__Ownable_init();
         encoreTokenAddress = _ENCOREAddress;
         WETHAddress = _WETHAddress;
-        tokenUniswapPair = IUniswapV2Factory(_uniswapFactory).getPair(WETHAddress,encoreTokenAddress);
+        tokenETHPair = IUniswapV2Factory(_uniswapFactory).getPair(WETHAddress,encoreTokenAddress);
         feePercentX100 = 11;
-        paused = true; 
-        editVoidFeeList(0x8fA75B10a6c4Aeb37E48A6a68ba5fbF30658E661, true); // encore staking vault
+        paused = true;
         sync();
         //minFinney = 5000;
     }
 
 
-    address tokenUniswapPair;
+    address tokenETHPair;
+    address tokenUSDTPair;
     IUniswapV2Factory public uniswapFactory;
     address internal WETHAddress;
     address encoreTokenAddress;
@@ -54,6 +54,10 @@ contract FeeApprover is OwnableUpgradeSafe {
     function setEncoreVaultAddress(address _encoreVaultAddress) public onlyOwner {
         encoreVaultAddress = _encoreVaultAddress;
         voidFeeList[encoreVaultAddress] = true;
+    }
+    
+    function setUSDTpair(address _pair) public onlyOwner {
+        tokenUSDTPair = _pair;
     }
 
     function editVoidFeeList(address _address, bool noFee) public onlyOwner{
@@ -95,7 +99,7 @@ contract FeeApprover is OwnableUpgradeSafe {
     // }
 
     function sync() public {
-        uint256 _LPSupplyOfPairTotal = IERC20(tokenUniswapPair).totalSupply();
+        uint256 _LPSupplyOfPairTotal = IERC20(tokenETHPair).totalSupply().add(IERC20(tokenUSDTPair).totalSupply());
         lastTotalSupplyOfLPTokens = _LPSupplyOfPairTotal;
     }
     
@@ -106,7 +110,8 @@ contract FeeApprover is OwnableUpgradeSafe {
         ) public  returns (uint256 transferToAmount, uint256 transferToFeeDistributorAmount)
         {
             require(paused == false, "FEE APPROVER: Transfers Paused");
-            uint256 _LPSupplyOfPairTotal = IERC20(tokenUniswapPair).totalSupply();
+            sync();
+            uint256 _LPSupplyOfPairTotal = IERC20(tokenETHPair).totalSupply().add(IERC20(tokenUSDTPair).totalSupply());
 
 
             // console.log("sender is " , sender);
@@ -115,7 +120,7 @@ contract FeeApprover is OwnableUpgradeSafe {
             // console.log("Old LP supply", lastTotalSupplyOfLPTokens);
             // console.log("Current LP supply", _LPSupplyOfPairTotal);
 
-            if(sender == tokenUniswapPair) {
+            if(sender == tokenETHPair || sender == tokenUSDTPair) {
                 require(lastTotalSupplyOfLPTokens <= _LPSupplyOfPairTotal, "Liquidity withdrawals forbidden");
                 //require(lastIsMint == false, "Liquidity withdrawals forbidden");
                 //require(lpTokenBurn == false, "Liquidity withdrawals forbidden");
@@ -123,7 +128,7 @@ contract FeeApprover is OwnableUpgradeSafe {
             
             require(blockedReceiverList[recipient] == false, "Blocked Recipient");
 
-            if(sender == encoreVaultAddress || voidFeeList[sender]) { // Dont have a fee when encorevault is sending, or infinite loop
+            if(sender == encoreVaultAddress || voidFeeList[sender] || voidFeeList[recipient]) { // Dont have a fee when encorevault is sending, or infinite loop
                 console.log("Sending without fee");                       // And when the fee split for developers are sending
                 transferToFeeDistributorAmount = 0;
                 transferToAmount = amount;
