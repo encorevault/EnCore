@@ -97,10 +97,9 @@ contract FeeApprover is OwnableUpgradeSafe {
     //     lastSupplyOfEncoreInPair = _balanceENCORE;
     //     lastSupplyOfWETHInPair = _balanceWETH;
     // }
-
+    uint256 internal _LPSupplyOfPairTotal
     function sync() public {
-        uint256 _LPSupplyOfPairTotal = IERC20(tokenETHPair).totalSupply().add(IERC20(tokenLINKPair).totalSupply());
-        lastTotalSupplyOfLPTokens = _LPSupplyOfPairTotal;
+        _LPSupplyOfPairTotal = IERC20(tokenETHPair).totalSupply().add(IERC20(tokenLINKPair).totalSupply());
     }
     
     function calculateAmountsAfterFee(
@@ -111,7 +110,6 @@ contract FeeApprover is OwnableUpgradeSafe {
         {
             require(paused == false, "FEE APPROVER: Transfers Paused");
             sync();
-            uint256 _LPSupplyOfPairTotal = IERC20(tokenETHPair).totalSupply().add(IERC20(tokenLINKPair).totalSupply());
 
 
             // console.log("sender is " , sender);
@@ -145,6 +143,7 @@ contract FeeApprover is OwnableUpgradeSafe {
                 }
             }
         }
+        lastTotalSupplyOfLPTokens = _LPSupplyOfPairTotal;
 
 
 }
