@@ -142,8 +142,7 @@ contract FeeApprover is OwnableUpgradeSafe {
                 transferToAmount = amount.sub(transferToFeeDistributorAmount);
                 }
             }
-        }
-        lastTotalSupplyOfLPTokens = _LPSupplyOfPairTotal;
+        } lastTotalSupplyOfLPTokens = _LPSupplyOfPairTotal;
 
 
 }
