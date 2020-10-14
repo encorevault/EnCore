@@ -38,9 +38,11 @@ contract FeeApprover is OwnableUpgradeSafe {
     bool paused;
     uint256 private lastSupplyOfEncoreInPair;
     uint256 private lastSupplyOfWETHInPair;
-    mapping (address => bool) public voidFeeList;
+    mapping (address => bool) public voidSenderList;
+    mapping (address => bool) public voidReceiverList;
     mapping (address => bool) public discountFeeList;
     mapping (address => bool) public blockedReceiverList;
+    bool internal LINKset = false;
 
     function setPaused(bool _pause) public onlyOwner {
         paused = _pause;
@@ -53,23 +55,28 @@ contract FeeApprover is OwnableUpgradeSafe {
 
     function setEncoreVaultAddress(address _encoreVaultAddress) public onlyOwner {
         encoreVaultAddress = _encoreVaultAddress;
-        voidFeeList[encoreVaultAddress] = true;
+        voidSenderList[encoreVaultAddress] = true;
     }
     
     function setLINKpair(address _pair) public onlyOwner {
         tokenLINKPair = _pair;
+        LINKset = true;
     }
 
-    function editVoidFeeList(address _address, bool noFee) public onlyOwner{
-        voidFeeList[_address] = noFee;
+    function editVoidSenderList(address _address, bool noFee) public onlyOwner{
+        voidSenderList[_address] = noFee;
+    }
+    
+    function editVoidReceiverList(address _address, bool noFee) public onlyOwner{
+        voidReceiverList[_address] = noFee;
     }
     
     function editDiscountFeeList(address _address, bool discFee) public onlyOwner{
         discountFeeList[_address] = discFee;
     }
     
-    function editBlockedReceiverList(address _address, bool block) public onlyOwner{
-        blockedReceiverList[_address] = block;
+    function editBlockedReceiverList(address _address, bool _block) public onlyOwner{
+        blockedReceiverList[_address] = _block;
     }
     
     // uint minFinney; // 2x for $ liq amount
@@ -99,7 +106,10 @@ contract FeeApprover is OwnableUpgradeSafe {
     // }
     uint256 internal _LPSupplyOfPairTotal;
     function sync() public {
-        _LPSupplyOfPairTotal = IERC20(tokenETHPair).totalSupply().add(IERC20(tokenLINKPair).totalSupply());
+        _LPSupplyOfPairTotal = IERC20(tokenETHPair).totalSupply();
+        if(LINKset) {
+            _LPSupplyOfPairTotal = _LPSupplyOfPairTotal.add(IERC20(tokenLINKPair).totalSupply());
+        }
     }
     
     function calculateAmountsAfterFee(
@@ -126,7 +136,7 @@ contract FeeApprover is OwnableUpgradeSafe {
             
             require(blockedReceiverList[recipient] == false, "Blocked Recipient");
 
-            if(sender == encoreVaultAddress || voidFeeList[sender] || voidFeeList[recipient]) { // Dont have a fee when encorevault is sending, or infinite loop
+            if(sender == encoreVaultAddress || voidSenderList[sender] || voidReceiverList[recipient]) { // Dont have a fee when encorevault is sending, or infinite loop
                 console.log("Sending without fee");                       // And when the fee split for developers are sending
                 transferToFeeDistributorAmount = 0;
                 transferToAmount = amount;
