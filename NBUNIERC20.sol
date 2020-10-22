@@ -159,21 +159,21 @@ contract NBUNIERC20 is Context, INBUNIERC20, Ownable {
 
     function getSecondsLeftInLiquidityGenerationEvent() public view returns (uint256) {
         require(liquidityGenerationOngoing(), "Event over");
-        console.log("7 days since start is", contractStartTimestamp.add(7 days), "Time now is", block.timestamp);
-        return contractStartTimestamp.add(7 days).sub(block.timestamp);
+        console.log("5 days since start is", contractStartTimestamp.add(5 days), "Time now is", block.timestamp);
+        return contractStartTimestamp.add(5 days).sub(block.timestamp);
     }
 
     function liquidityGenerationOngoing() public view returns (bool) {
-        console.log("7 days since start is", contractStartTimestamp.add(7 days), "Time now is", block.timestamp);
-        console.log("liquidity generation ongoing", contractStartTimestamp.add(7 days) < block.timestamp);
-        return contractStartTimestamp.add(15 hours) > block.timestamp;
+        console.log("5 days since start is", contractStartTimestamp.add(5 days), "Time now is", block.timestamp);
+        console.log("liquidity generation ongoing", contractStartTimestamp.add(5 days) < block.timestamp);
+        return contractStartTimestamp.add(5 minutes) > block.timestamp;
     }
 
     // Emergency drain in case of a bug
     // Adds all funds to owner to refund people
     // Designed to be as simple as possible
     function emergencyDrain24hAfterLiquidityGenerationEventIsDone() public onlyOwner {
-        require(contractStartTimestamp.add(8 days) < block.timestamp, "Liquidity generation grace period still ongoing"); // About 24h after liquidity generation happens
+        require(contractStartTimestamp.add(6 days) < block.timestamp, "Liquidity generation grace period still ongoing"); // About 24h after liquidity generation happens
         (bool success, ) = msg.sender.call.value(address(this).balance)("");
         require(success, "Transfer failed.");
         _balances[msg.sender] = _balances[address(this)];
