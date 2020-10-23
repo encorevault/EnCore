@@ -13,11 +13,11 @@ Staking Vault (Proxy): 0xdeF7BdF8eCb450c1D93C5dB7C8DBcE5894CCDaa9
 
 Fee Approver (Proxy): 0xF3c3ff0ea59d15e82b9620Ed7406fa3f6A261f98
 
-Staking Vault (Implementation): 0xb30435Da27bd3B88e2Bf8550BCdBe3F681Bc3280
+Staking Vault (Implementation): 0xe35a2dbA47d0E873997Ea276d8DaD3cD197D593f
 
 Fee Approver (Implementation): 0x4E5FB14E7E7cC254aEeC9DB6f737682032E9660D
 
-Proxy Admin: 0x1964784ba40c9fD5EED1070c1C38cd5D1d5F9f55\
+Proxy Admin: 0x1964784ba40c9fD5EED1070c1C38cd5D1d5F9f55
 
 # Utility Contracts
 Fee Splitter: 0xC8eCBE1CF67Edba355a4B5EEA7b1E1414239e205
