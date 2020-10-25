@@ -13,7 +13,7 @@ Staking Vault (Proxy): 0xdeF7BdF8eCb450c1D93C5dB7C8DBcE5894CCDaa9
 
 Fee Approver (Proxy): 0xF3c3ff0ea59d15e82b9620Ed7406fa3f6A261f98
 
-Staking Vault (Implementation): 0xB1166FFE5dCe7a0ca54AEd88713AF2a0d5DeCE68
+Staking Vault (Implementation): 0xB1166FFE5dCe7a0ca54AEd88713AF2a0d5DeCE68, 0x4E84668Ff607eF8BE9579d67dca4dc06002eb649
 
 Fee Approver (Implementation): 0x4E5FB14E7E7cC254aEeC9DB6f737682032E9660D
 
