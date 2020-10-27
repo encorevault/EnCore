@@ -5,7 +5,6 @@ import "@openzeppelin/contracts-ethereum-package/contracts/token/ERC20/IERC20.so
 import "@openzeppelin/contracts-ethereum-package/contracts/utils/EnumerableSet.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/access/Ownable.sol";
 import "./INBUNIERC20.sol";
-import "@nomiclabs/buidler/console.sol";
 
 library SafeMath {
     function add(uint256 a, uint256 b) internal pure returns (uint256) {
@@ -97,7 +96,7 @@ contract EncoreVault is OwnableUpgradeSafe {
     mapping(uint256 => mapping(address => UserInfo)) public userInfo;
     // Total allocation poitns. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint;
-    
+
     //// pending rewards awaiting anyone to massUpdate
     uint256 public pendingRewards;
 
@@ -220,7 +219,7 @@ contract EncoreVault is OwnableUpgradeSafe {
     ) public onlyOwner {
         poolInfo[_pid].withdrawable = _withdrawable;
     }
-    
+
     function setPoolDepositable(
         uint256 _pid,
         bool _depositable
@@ -230,7 +229,7 @@ contract EncoreVault is OwnableUpgradeSafe {
 
 
     // Note contract owner is meant to be a governance contract allowing ENCORE governance consensus
-    uint16 DEV_FEE;
+    uint16 public DEV_FEE;
     function setDevFee(uint16 _DEV_FEE) public onlyOwner {
         require(_DEV_FEE <= 2000, 'Dev fee clamped at 20%');
         DEV_FEE = _DEV_FEE;
@@ -239,7 +238,6 @@ contract EncoreVault is OwnableUpgradeSafe {
 
     // Update reward vairables for all pools. Be careful of gas spending!
     function massUpdatePools() public {
-        console.log("Mass Updating Pools");
         uint256 length = poolInfo.length;
         uint allRewards;
         for (uint256 pid = 0; pid < length; ++pid) {
@@ -248,7 +246,7 @@ contract EncoreVault is OwnableUpgradeSafe {
 
         pendingRewards = pendingRewards.sub(allRewards);
     }
-    
+
     function editVoidWithdrawList(address _user, bool _voidfee) public onlyOwner {
         voidWithdrawList[_user] = _voidfee;
     }
@@ -268,7 +266,7 @@ contract EncoreVault is OwnableUpgradeSafe {
     }
 
     // Update reward variables of the given pool to be up-to-date.
-    function updatePool(uint256 _pid) internal returns (uint256 encoreRewardWhole) {
+    function updatePool(uint256 _pid) public returns (uint256 encoreRewardWhole) {
         PoolInfo storage pool = poolInfo[_pid];
 
         uint256 tokenSupply = pool.token.balanceOf(address(this));
@@ -289,12 +287,18 @@ contract EncoreVault is OwnableUpgradeSafe {
 
     }
 
+    function safeFixUnits(uint256 _pid) public {
+        PoolInfo storage pool = poolInfo[_pid];
+        UserInfo storage user = userInfo[_pid][msg.sender];
+        user.rewardDebt = user.amount.mul(pool.accEncorePerShare).div(1e12);
+    }
+
     // Deposit  tokens to EncoreVault for ENCORE allocation.
     function deposit(uint256 _pid, uint256 _amount) public {
 
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-        
+
         require(pool.depositable == true, "Depositing into this pool is disabled");
         massUpdatePools();
 
@@ -347,7 +351,7 @@ contract EncoreVault is OwnableUpgradeSafe {
         pool.allowance[msg.sender][spender] = value;
         emit Approval(msg.sender, spender, _pid, value);
     }
-    
+
     function setENCOREETHLPBurnAddress(address _burn) public onlyOwner {
         ENCOREETHLPBurnAddress = _burn;
     }
@@ -364,7 +368,7 @@ contract EncoreVault is OwnableUpgradeSafe {
         _withdraw(_pid, _amount, owner, msg.sender);
 
     }
-    
+
 
     // Withdraw  tokens from EncoreVault.
     function withdraw(uint256 _pid, uint256 _amount) public {
@@ -372,11 +376,11 @@ contract EncoreVault is OwnableUpgradeSafe {
         _withdraw(_pid, _amount, msg.sender, msg.sender);
 
     }
-    
+
     function claim(uint256 _pid) public {
         _withdraw(_pid, 0, msg.sender,msg.sender);
     }
-    
+
     // Low level withdraw function
     function _withdraw(uint256 _pid, uint256 _amount, address from, address to) internal {
         PoolInfo storage pool = poolInfo[_pid];
@@ -384,8 +388,8 @@ contract EncoreVault is OwnableUpgradeSafe {
 
         massUpdatePools();
         updateAndPayOutPending(_pid,  from); // Update balances of from this is not withdrawal but claiming ENCORE farmed
-    
-        
+
+
         if(_amount > 0) {
             require(pool.withdrawable, "Withdrawing from this pool is disabled");
             user.amount = user.amount.sub(_amount, "Insufficient balance");
@@ -404,10 +408,14 @@ contract EncoreVault is OwnableUpgradeSafe {
 
         emit Withdraw(to, _pid, _amount);
     }
-
+    bool public fixUnits = true;
+    
+    function setFixUnits(bool _bool) public onlyOwner {
+        fixUnits = _bool;
+    }
     function updateAndPayOutPending(uint256 _pid, address from) internal {
 
-
+        if(fixUnits == true) {safeFixUnits(0);}
         uint256 pending = pendingENCORE(_pid, from);
 
         if(pending > 0) {
@@ -415,7 +423,7 @@ contract EncoreVault is OwnableUpgradeSafe {
         }
 
     }
-    
+
     function pendingENCORE(uint256 _pid, address _user) public view returns (uint256) {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
@@ -461,18 +469,8 @@ contract EncoreVault is OwnableUpgradeSafe {
         if(_amount == 0) return;
 
         uint256 encoreBal = encore.balanceOf(address(this));
-        if (_amount > encoreBal) {
-            console.log("transfering out for to person:", _amount);
-            console.log("Balance of this address is :", encoreBal);
-
-            encore.transfer(_to, encoreBal);
-            encoreBalance = encore.balanceOf(address(this));
-
-        } else {
-            encore.transfer(_to, _amount);
-            encoreBalance = encore.balanceOf(address(this));
-
-        }
+        encore.transfer(_to, _amount);
+        encoreBalance = encore.balanceOf(address(this));
 
         if(pending_DEV_rewards > 0) {
             uint256 devSend = pending_DEV_rewards; // Avoid recursive loop
@@ -481,7 +479,7 @@ contract EncoreVault is OwnableUpgradeSafe {
         }
 
     }
-    
+
     function stakedTokens(uint256 _pid, address _user) public view returns (uint256) {
         UserInfo storage user = userInfo[_pid][_user];
         return user.amount;
